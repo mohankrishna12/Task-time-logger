@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Task Time Logger</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #eef2f7;
+    margin: 0;
+    padding: 2rem;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  h1 {
+    text-align: center;
+    color: #34495e;
+  }
+  form {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  input[type="text"] {
+    flex: 1;
+    padding: 0.6rem;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+  }
+  button {
+    padding: 0.6rem 1rem;
+    background: #2980b9;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+  button:hover {
+    background: #1f6391;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th, td {
+    padding: 0.6rem;
+    border-bottom: 1px solid #dcdcdc;
+    text-align: left;
+  }
+  th {
+    background: #bdc3c7;
+  }
+  .btn-stop {
+    background: #c0392b;
+    color: white;
+    border: none;
+    padding: 0.3rem 0.7rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .btn-stop:hover {
+    background: #962d22;
+  }
+  #total-time {
+    margin-top: 1rem;
+    font-weight: bold;
+    text-align: right;
+    color: #2c3e50;
+  }
+</style>
+</head>
+<body>
+
+<h1>Task Time Logger</h1>
+
+<form id="task-form">
+  <input type="text" id="task-input" placeholder="Enter task name" required />
+  <button type="submit">Start Task</button>
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>Task</th>
+      <th>Start Time</th>
+      <th>End Time</th>
+      <th>Duration</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody id="task-list"></tbody>
+</table>
+
+<div id="total-time">Total Logged Time: 0h 0m</div>
+
+<script>
+  const taskForm = document.getElementById('task-form');
+  const taskInput = document.getElementById('task-input');
+  const taskList = document.getElementById('task-list');
+  const totalTimeElem = document.getElementById('total-time');
+
+  let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+  function saveTasks() {
+    localStorage.setItem('tasks', JSON.stringify(tasks));
+  }
+
+  function formatTime(dateStr) {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  }
+
+  function calculateDuration(start, end) {
+    if (!end) return '-';
+    const diffMs = new Date(end) - new Date(start);
+    const diffMins = Math.floor(diffMs / 60000);
+    const hours = Math.floor(diffMins / 60);
+    const minutes = diffMins % 60;
+    return `${hours}h ${minutes}m`;
+  }
+
+  function updateTotalTime() {
+    let totalMins = 0;
+    tasks.forEach(task => {
+      if(task.endTime) {
+        const diffMs = new Date(task.endTime) - new Date(task.startTime);
+        totalMins += Math.floor(diffMs / 60000);
+      }
+    });
+    const hours = Math.floor(totalMins / 60);
+    const minutes = totalMins % 60;
+    totalTimeElem.textContent = `Total Logged Time: ${hours}h ${minutes}m`;
+  }
+
+  function renderTasks() {
+    taskList.innerHTML = '';
+    tasks.forEach((task, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${task.name}</td>
+        <td>${formatTime(task.startTime)}</td>
+        <td>${formatTime(task.endTime)}</td>
+        <td>${calculateDuration(task.startTime, task.endTime)}</td>
+        <td>${task.endTime ? '-' : `<button class="btn-stop" data-idx="${idx}">Stop</button>`}</td>
+      `;
+      taskList.appendChild(tr);
+    });
+    updateTotalTime();
+  }
+
+  taskForm.addEventListener('submit', e => {
+    e.preventDefault();
+    tasks.push({ name: taskInput.value.trim(), startTime: new Date().toISOString(), endTime: null });
+    saveTasks();
+    renderTasks();
+    taskForm.reset();
+  });
+
+  taskList.addEventListener('click', e => {
+    if(e.target.classList.contains('btn-stop')) {
+      const idx = e.target.dataset.idx;
+      tasks[idx].endTime = new Date().toISOString();
+      saveTasks();
+      renderTasks();
+    }
+  });
+
+  renderTasks();
+</script>
+
+</body>
+</html>
